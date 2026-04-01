@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生活ログ</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f5f5f5;
+}
+
+.app {
+  max-width: 400px;
+  margin: auto;
+  background: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.input-area {
+  padding: 16px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 8px;
+}
+
+/* ボタン */
+button {
+  padding: 8px 12px;
+  margin: 4px;
+  border: none;
+  background: #eee;
+  border-radius: 8px;
+}
+
+.main-button {
+  width: 100%;
+  padding: 12px;
+  background: black;
+  color: white;
+  border-radius: 10px;
+}
+
+/* タグ */
+.tag.active {
+  background: black;
+  color: white;
+}
+
+/* カード */
+.card {
+  background: #fafafa;
+  margin: 10px;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+/* タブ */
+.tabbar {
+  margin-top: auto;
+  display: flex;
+  border-top: 1px solid #ddd;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.activeTab {
+  font-weight: bold;
+}
+
+/* 時計 */
+.clock {
+  text-align: center;
+  padding: 20px;
+}
+
+.clock input[type=range] {
+  width: 80%;
+}
+
+#saveMessage {
+  text-align: center;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<div class="header">生活ログ</div>
+
+<div class="input-area">
+  <input type="date" id="date">
+</div>
+
+<!-- 記録 -->
+<div id="logScreen">
+
+  <div class="input-area">
+    <input id="text" placeholder="やったこと">
+    <input id="tagInput" placeholder="タグ">
+    <button class="main-button" onclick="addLog()">追加</button>
+  </div>
+
+<div id="summary" class="card"></div>
+
+  <div id="tagButtons"></div>
+  <div id="list"></div>
+
+</div>
+
+<!-- 睡眠 -->
+<div id="sleepScreen" style="display:none;">
+
+  <div class="clock">
+    <h3>起床</h3>
+    <input type="range" min="0" max="23" id="wakeTime">
+    <p><span id="wakeLabel"></span></p>
+  </div>
+
+  <div class="clock">
+    <h3>就寝</h3>
+    <input type="range" min="0" max="23" id="bedTime">
+    <p><span id="bedLabel"></span></p>
+  </div>
+
+  <button class="main-button" onclick="saveSleep()">睡眠を保存</button>
+  <p id="saveMessage"></p>
+
+</div>
+
+<!-- タブ -->
+<div class="tabbar">
+  <div id="tabLog" class="tab activeTab" onclick="showTab('log')">記録</div>
+  <div id="tabSleep" class="tab" onclick="showTab('sleep')">睡眠</div>
+</div>
+
+</div>
+
+<script>
+let data = {};
+let tags = [];
+let activeTag = null;
+
+const dateInput = document.getElementById("date");
+dateInput.value = new Date().toISOString().split("T")[0];
+
+// 保存
+function saveData() {
+  localStorage.setItem("lifeLog", JSON.stringify({ data, tags }));
+}
+
+// 読み込み
+function loadData() {
+  const saved = JSON.parse(localStorage.getItem("lifeLog") || "{}");
+  data = saved.data || {};
+  tags = saved.tags || [];
+}
+
+// 日付データ取得
+function getCurrentData() {
+  const d = dateInput.value;
+
+  if (!data[d]) {
+    data[d] = {
+      logs: [],
+      wake: 7,
+      bed: 23
+    };
+  }
+
+  return data[d];
+}
+
+// 記録追加
+function addLog() {
+  const text = document.getElementById("text").value;
+  const tag = document.getElementById("tagInput").value;
+
+  if (!text) return;
+
+  const d = getCurrentData();
+  d.logs.push({ text, tag });
+
+  if (tag && !tags.includes(tag)) tags.push(tag);
+
+  saveData();
+  render();
+
+  document.getElementById("text").value = "";
+  document.getElementById("tagInput").value = "";
+}
+
+// 描画
+function renderSummary() {
+  const d = getCurrentData();
+  const summary = document.getElementById("summary");
+
+  summary.innerHTML = `
+    <b>今日のまとめ</b><br>
+    起床：${d.wake}:00<br>
+    就寝：${d.bed}:00<br>
+    記録数：${d.logs.length}件
+  `;
+}
+
+function render() {
+  renderTags();
+  renderSummary();
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  const d = getCurrentData();
+
+  d.logs
+    .filter(log => !activeTag || log.tag === activeTag)
+.forEach((log, index) => {
+  const div = document.createElement("div");
+  div.className = "card";
+
+  const text = document.createElement("span");
+  text.textContent = log.text + " [" + log.tag + "]";
+
+  const del = document.createElement("button");
+  del.textContent = "削除";
+  del.style.float = "right";
+
+  del.onclick = () => {
+    d.logs.splice(index, 1);
+    saveData();
+    render();
+  };
+
+  div.appendChild(text);
+  div.appendChild(del);
+
+  list.appendChild(div);
+});
+
+  wake.value = d.wake;
+  bed.value = d.bed;
+  updateSleepLabels();
+}
+
+// タグ描画
+function renderTags() {
+  const area = document.getElementById("tagButtons");
+  area.innerHTML = "";
+
+  tags.forEach(tag => {
+    const btn = document.createElement("button");
+    btn.className = tag === activeTag ? "tag active" : "tag";
+    btn.textContent = tag;
+
+    btn.onclick = () => {
+      activeTag = (activeTag === tag) ? null : tag;
+      render();
+    };
+
+    area.appendChild(btn);
+  });
+}
+
+// タブ切り替え
+function showTab(tab) {
+  document.getElementById("logScreen").style.display = "none";
+  document.getElementById("sleepScreen").style.display = "none";
+
+  document.getElementById("tabLog").classList.remove("activeTab");
+  document.getElementById("tabSleep").classList.remove("activeTab");
+
+  if (tab === "log") {
+    document.getElementById("logScreen").style.display = "block";
+    document.getElementById("tabLog").classList.add("activeTab");
+  } else {
+    document.getElementById("sleepScreen").style.display = "block";
+    document.getElementById("tabSleep").classList.add("activeTab");
+  }
+}
+
+// 睡眠
+const wake = document.getElementById("wakeTime");
+const bed = document.getElementById("bedTime");
+const wakeLabel = document.getElementById("wakeLabel");
+const bedLabel = document.getElementById("bedLabel");
+const msg = document.getElementById("saveMessage");
+
+function updateSleepLabels() {
+  wakeLabel.textContent = wake.value + ":00";
+  bedLabel.textContent = bed.value + ":00";
+}
+
+wake.oninput = () => {
+  updateSleepLabels();
+  msg.textContent = "未保存";
+};
+
+bed.oninput = () => {
+  updateSleepLabels();
+  msg.textContent = "未保存";
+};
+
+function saveSleep() {
+  const d = getCurrentData();
+  d.wake = wake.value;
+  d.bed = bed.value;
+
+  saveData();
+
+  msg.textContent = "保存しました！✔";
+  setTimeout(() => msg.textContent = "", 2000);
+}
+
+// 日付変更
+dateInput.onchange = render;
+
+// 初期化
+loadData();
+render();
+</script>
+
+</body>
+</html>
