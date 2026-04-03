@@ -5,157 +5,161 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>生活ログ</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f5f5f5;
+  margin:0;
+  font-family:sans-serif;
+  background:#f0f0f0;
 }
 
 .app {
-  max-width: 400px;
-  margin: auto;
-  background: white;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  max-width:420px;
+  margin:auto;
+  background:white;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 
+/* 余白のベース */
+.container {
+  padding:16px;
+}
+
+/* ヘッダー */
 .header {
-  padding: 16px;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.input-area {
-  padding: 16px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: none;
-  background: #f0f0f0;
-  border-radius: 8px;
-}
-
-/* ボタン */
-button {
-  padding: 8px 12px;
-  margin: 4px;
-  border: none;
-  background: #eee;
-  border-radius: 8px;
-}
-
-.main-button {
-  width: 100%;
-  padding: 12px;
-  background: black;
-  color: white;
-  border-radius: 10px;
-}
-
-/* タグ */
-.tag.active {
-  background: black;
-  color: white;
+  padding:16px;
+  font-weight:bold;
 }
 
 /* カード */
 .card {
-  background: #fafafa;
-  margin: 10px;
-  padding: 12px;
-  border-radius: 10px;
+  background:#fafafa;
+  margin-bottom:16px;
+  padding:14px;
+  border-radius:12px;
+}
+
+/* 入力 */
+input {
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border:none;
+  background:#eee;
+  border-radius:8px;
+  box-sizing:border-box;
+}
+
+/* ボタン */
+button {
+  padding:10px;
+  margin:4px;
+  border:none;
+  border-radius:10px;
+}
+
+.main {
+  width:100%;
+  background:black;
+  color:white;
+  padding:12px;
+}
+
+/* タグ */
+.tag.active {
+  background:black;
+  color:white;
+}
+
+/* スライダー */
+input[type=range] {
+  width:100%;
+  margin:12px 0;
 }
 
 /* タブ */
 .tabbar {
-  margin-top: auto;
-  display: flex;
-  border-top: 1px solid #ddd;
+  margin-top:auto;
+  display:flex;
+  border-top:1px solid #ddd;
 }
 
 .tab {
-  flex: 1;
-  text-align: center;
-  padding: 12px;
-  cursor: pointer;
+  flex:1;
+  text-align:center;
+  padding:12px;
 }
 
 .activeTab {
-  font-weight: bold;
-}
-
-/* 時計 */
-.clock {
-  text-align: center;
-  padding: 20px;
-}
-
-.clock input[type=range] {
-  width: 80%;
-}
-
-#saveMessage {
-  text-align: center;
-  font-size: 14px;
+  font-weight:bold;
 }
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
 <div class="header">生活ログ</div>
 
-<div class="input-area">
-  <input type="date" id="date">
+<!-- 日付 -->
+<div class="container">
+  <div class="card">
+    <input type="date" id="date" onchange="render()">
+  </div>
 </div>
 
 <!-- 記録 -->
-<div id="logScreen">
-
-  <div class="input-area">
+<div id="logScreen" class="container">
+  <div class="card">
     <input id="text" placeholder="やったこと">
     <input id="tagInput" placeholder="タグ">
-    <button class="main-button" onclick="addLog()">追加</button>
+    <button class="main" onclick="addLog()">追加</button>
   </div>
-
-<div id="summary" class="card"></div>
 
   <div id="tagButtons"></div>
   <div id="list"></div>
-
 </div>
 
 <!-- 睡眠 -->
-<div id="sleepScreen" style="display:none;">
+<div id="sleepScreen" class="container" style="display:none;">
+  <div class="card">
 
-  <div class="clock">
-    <h3>起床</h3>
-    <input type="range" min="0" max="23" id="wakeTime">
-    <p><span id="wakeLabel"></span></p>
+    起床
+    <input type="range" min="0" max="23" id="wake" oninput="updateLabels()">
+    <div id="wakeLabel"></div>
+
+    就寝
+    <input type="range" min="0" max="23" id="bed" oninput="updateLabels()">
+    <div id="bedLabel"></div>
+
+    <button class="main" onclick="saveSleep()">保存</button>
+
+  </div>
+</div>
+
+<!-- まとめ -->
+<div id="graphScreen" class="container" style="display:none;">
+  <div class="card" id="summary"></div>
+
+  <div class="card" style="text-align:center;">
+    <button onclick="changeWeek(-1)">←</button>
+    <span id="weekLabel"></span>
+    <button onclick="changeWeek(1)">→</button>
   </div>
 
-  <div class="clock">
-    <h3>就寝</h3>
-    <input type="range" min="0" max="23" id="bedTime">
-    <p><span id="bedLabel"></span></p>
+  <div class="card">
+    <canvas id="chart"></canvas>
   </div>
-
-  <button class="main-button" onclick="saveSleep()">睡眠を保存</button>
-  <p id="saveMessage"></p>
-
 </div>
 
 <!-- タブ -->
 <div class="tabbar">
-  <div id="tabLog" class="tab activeTab" onclick="showTab('log')">記録</div>
-  <div id="tabSleep" class="tab" onclick="showTab('sleep')">睡眠</div>
+  <div class="tab activeTab" onclick="showTab('log')" id="tabLog">記録</div>
+  <div class="tab" onclick="showTab('sleep')" id="tabSleep">睡眠</div>
+  <div class="tab" onclick="showTab('graph')" id="tabGraph">まとめ</div>
 </div>
 
 </div>
@@ -164,181 +168,191 @@ button {
 let data = {};
 let tags = [];
 let activeTag = null;
+let currentWeekOffset = 0;
+let chart;
 
 const dateInput = document.getElementById("date");
 dateInput.value = new Date().toISOString().split("T")[0];
 
-// 保存
-function saveData() {
-  localStorage.setItem("lifeLog", JSON.stringify({ data, tags }));
+function saveData(){
+  localStorage.setItem("lifeLog", JSON.stringify({data,tags}));
 }
 
-// 読み込み
-function loadData() {
-  const saved = JSON.parse(localStorage.getItem("lifeLog") || "{}");
+function loadData(){
+  const saved = JSON.parse(localStorage.getItem("lifeLog")||"{}");
   data = saved.data || {};
   tags = saved.tags || [];
 }
 
-// 日付データ取得
-function getCurrentData() {
+function getCurrentData(){
   const d = dateInput.value;
-
-  if (!data[d]) {
-    data[d] = {
-      logs: [],
-      wake: 7,
-      bed: 23
-    };
-  }
-
+  if(!data[d]) data[d]={logs:[],wake:7,bed:23};
   return data[d];
 }
 
-// 記録追加
-function addLog() {
+function addLog(){
   const text = document.getElementById("text").value;
   const tag = document.getElementById("tagInput").value;
-
-  if (!text) return;
+  if(!text) return;
 
   const d = getCurrentData();
-  d.logs.push({ text, tag });
+  d.logs.push({text,tag});
 
-  if (tag && !tags.includes(tag)) tags.push(tag);
+  if(tag && !tags.includes(tag)) tags.push(tag);
 
   saveData();
   render();
 
-  document.getElementById("text").value = "";
-  document.getElementById("tagInput").value = "";
+  document.getElementById("text").value="";
+  document.getElementById("tagInput").value="";
 }
 
-// 描画
-function renderSummary() {
-  const d = getCurrentData();
-  const summary = document.getElementById("summary");
-
-  summary.innerHTML = `
-    <b>今日のまとめ</b><br>
-    起床：${d.wake}:00<br>
-    就寝：${d.bed}:00<br>
-    記録数：${d.logs.length}件
-  `;
-}
-
-function render() {
+function render(){
   renderTags();
-  renderSummary();
 
-  const list = document.getElementById("list");
-  list.innerHTML = "";
+  const list=document.getElementById("list");
+  list.innerHTML="";
 
-  const d = getCurrentData();
+  const d=getCurrentData();
 
   d.logs
-    .filter(log => !activeTag || log.tag === activeTag)
-.forEach((log, index) => {
-  const div = document.createElement("div");
-  div.className = "card";
+  .map((log, index) => ({log, index}))
+  .filter(item => !activeTag || item.log.tag === activeTag)
+  .forEach(item => {
+    const div=document.createElement("div");
+    div.className="card";
 
-  const text = document.createElement("span");
-  text.textContent = log.text + " [" + log.tag + "]";
+    div.innerHTML = `
+      ${item.log.text} [${item.log.tag}]
+      <button onclick="deleteLog(${item.index})" style="float:right">削除</button>
+    `;
 
-  const del = document.createElement("button");
-  del.textContent = "削除";
-  del.style.float = "right";
+    list.appendChild(div);
+  });
 
-  del.onclick = () => {
-    d.logs.splice(index, 1);
-    saveData();
-    render();
-  };
-
-  div.appendChild(text);
-  div.appendChild(del);
-
-  list.appendChild(div);
-});
-
-  wake.value = d.wake;
-  bed.value = d.bed;
-  updateSleepLabels();
+  wake.value=d.wake;
+  bed.value=d.bed;
+  updateLabels();
 }
 
-// タグ描画
-function renderTags() {
-  const area = document.getElementById("tagButtons");
-  area.innerHTML = "";
+function deleteLog(i){
+  const d=getCurrentData();
+  d.logs.splice(i,1);
+  saveData();
+  render();
+}
 
-  tags.forEach(tag => {
-    const btn = document.createElement("button");
-    btn.className = tag === activeTag ? "tag active" : "tag";
-    btn.textContent = tag;
-
-    btn.onclick = () => {
-      activeTag = (activeTag === tag) ? null : tag;
+function renderTags(){
+  const area=document.getElementById("tagButtons");
+  area.innerHTML="";
+  tags.forEach(tag=>{
+    const btn=document.createElement("button");
+    btn.textContent=tag;
+    btn.className=tag===activeTag?"tag active":"tag";
+    btn.onclick=()=>{
+      activeTag = activeTag===tag ? null : tag;
       render();
     };
-
     area.appendChild(btn);
   });
 }
 
-// タブ切り替え
-function showTab(tab) {
-  document.getElementById("logScreen").style.display = "none";
-  document.getElementById("sleepScreen").style.display = "none";
+function showTab(tab){
+  ["log","sleep","graph"].forEach(t=>{
+    document.getElementById(t+"Screen").style.display="none";
+    document.getElementById("tab"+capitalize(t)).classList.remove("activeTab");
+  });
 
-  document.getElementById("tabLog").classList.remove("activeTab");
-  document.getElementById("tabSleep").classList.remove("activeTab");
+  document.getElementById(tab+"Screen").style.display="block";
+  document.getElementById("tab"+capitalize(tab)).classList.add("activeTab");
 
-  if (tab === "log") {
-    document.getElementById("logScreen").style.display = "block";
-    document.getElementById("tabLog").classList.add("activeTab");
-  } else {
-    document.getElementById("sleepScreen").style.display = "block";
-    document.getElementById("tabSleep").classList.add("activeTab");
+  if(tab==="graph"){
+    renderSummary();
+    renderChart();
   }
 }
 
-// 睡眠
-const wake = document.getElementById("wakeTime");
-const bed = document.getElementById("bedTime");
-const wakeLabel = document.getElementById("wakeLabel");
-const bedLabel = document.getElementById("bedLabel");
-const msg = document.getElementById("saveMessage");
+function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
-function updateSleepLabels() {
+function updateLabels(){
   wakeLabel.textContent = wake.value + ":00";
   bedLabel.textContent = bed.value + ":00";
 }
 
-wake.oninput = () => {
-  updateSleepLabels();
-  msg.textContent = "未保存";
-};
-
-bed.oninput = () => {
-  updateSleepLabels();
-  msg.textContent = "未保存";
-};
-
-function saveSleep() {
-  const d = getCurrentData();
-  d.wake = wake.value;
-  d.bed = bed.value;
-
+function saveSleep(){
+  const d=getCurrentData();
+  d.wake=Number(wake.value);
+  d.bed=Number(bed.value);
   saveData();
 
-  msg.textContent = "保存しました！✔";
-  setTimeout(() => msg.textContent = "", 2000);
+  alert("保存しました！");
 }
 
-// 日付変更
-dateInput.onchange = render;
+function getSleepHours(wake,bed){
+  let h=wake-bed;
+  if(h<0) h+=24;
+  return h;
+}
 
-// 初期化
+function renderSummary(){
+  const d=getCurrentData();
+  summary.innerHTML=`
+    今日のまとめ<br>
+    記録：${d.logs.length}件<br>
+    睡眠：${getSleepHours(d.wake,d.bed)}時間
+  `;
+}
+
+function getWeekDates(offset){
+  const today=new Date();
+  today.setDate(today.getDate()+offset*7);
+
+  const day=today.getDay();
+  const monday=new Date(today);
+  monday.setDate(today.getDate()-day+1);
+
+  let days=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(monday);
+    d.setDate(monday.getDate()+i);
+    days.push(d.toISOString().split("T")[0]);
+  }
+  return days;
+}
+
+function renderChart(){
+  const dates=getWeekDates(currentWeekOffset);
+
+  weekLabel.textContent = dates[0]+" ～ "+dates[6];
+
+  const logs=[];
+  const sleep=[];
+
+  dates.forEach(date=>{
+    const d=data[date]||{logs:[],wake:7,bed:23};
+    logs.push(d.logs.length);
+    sleep.push(getSleepHours(d.wake,d.bed));
+  });
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(document.getElementById("chart"),{
+    type:"line",
+    data:{
+      labels:dates,
+      datasets:[
+        {label:"記録数",data:logs},
+        {label:"睡眠時間",data:sleep}
+      ]
+    }
+  });
+}
+
+function changeWeek(n){
+  currentWeekOffset+=n;
+  renderChart();
+}
+
 loadData();
 render();
 </script>
